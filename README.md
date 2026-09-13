@@ -1,71 +1,69 @@
-# Homebrew Komai Tap
+# Komai Homebrew Tap
 
-A Homebrew tap for [Komai](https://github.com/etkecc/komai) — a fine Matrix chat
-client for the desktop. 🦁
+The official [etke.cc](https://etke.cc/) Homebrew tap for [Komai](https://komai.chat/), a Matrix chat client for the desktop.
 
-## Installation
+## Requirements
 
-### Prerequisites
+- Apple Silicon Mac (ARM64)
 - macOS 13.3 (Ventura) or newer
-- Apple Silicon (ARM64) — Komai does not ship an Intel/x86_64 build
-- Homebrew installed
+- [Homebrew](https://brew.sh/)
 
-### Install Komai
+Komai does not currently provide an Intel Mac build.
 
-```bash
-# Add the tap
-brew tap bstaeheli/homebrew-komai
+## Install
 
-# Trust the tap (Homebrew requires this for casks from third-party taps)
-brew trust bstaeheli/homebrew-komai
-
-# Install Komai (it is a GUI app, so it installs as a cask)
-brew install --cask komai
+```sh
+brew install --cask etkecc/komai/komai
 ```
 
-### Upgrade Komai
+Homebrew adds the tap automatically.
+On Homebrew 6 and newer, this command trusts only the Komai cask; trusting the whole tap is unnecessary.
 
-```bash
-brew update
-brew upgrade --cask komai
-```
+### First launch
 
-### First launch (Gatekeeper)
-
-Komai is not signed or notarized by Apple, so macOS blocks the first launch:
+Komai is not signed with an Apple Developer ID or notarized, so macOS blocks the first launch:
 
 - **macOS 13/14:** right-click `komai.app` in `/Applications` and choose **Open**.
-- **macOS 15+:** try to open it once, then go to
-  **System Settings → Privacy & Security → "Open Anyway"**.
+- **macOS 15+:** try opening the app once, then go to **System Settings → Privacy & Security → Open Anyway**.
 
-## About This Tap
+See [Apple's explanation of opening apps from unidentified developers](https://support.apple.com/en-us/102445).
 
-This tap automatically checks for new Komai releases **daily** and updates the
-cask with:
-- The latest version from the GitHub releases
-- A freshly computed SHA256 checksum
+## Upgrade
 
-The download URL is derived from the version, so a version bump is all that is
-needed.
+Quit Komai before upgrading, then run:
 
-## Supported Architecture
+```sh
+brew update
+brew upgrade --cask etkecc/komai/komai
+```
 
-- ✅ macOS ARM64 (Apple Silicon), macOS 13.3+
-- ❌ macOS x86_64 (Komai does not provide an x86_64 build)
+The tap checks for new [Komai releases](https://github.com/etkecc/komai/releases) daily.
+The updater refreshes the cask version and computes the DMG checksum when a new release appears.
 
 ## Uninstall
 
-```bash
-brew uninstall --cask komai
-brew untap bstaeheli/homebrew-komai
+```sh
+brew uninstall --cask etkecc/komai/komai
+brew untap etkecc/komai
 ```
+
+Uninstalling removes the app and keeps your Komai settings and account data.
+
+## Acknowledgements
+
+The initial Komai cask and automated updater were created by [Boris Stäheli](https://github.com/bstaeheli) in [bstaeheli/homebrew-komai](https://github.com/bstaeheli/homebrew-komai).
+Boris [proposed an official tap](https://github.com/etkecc/komai/issues/282) and made his work available for adoption by etke.cc.
+
+This repository preserves the original Git history and attribution.
+The official tap is maintained by etke.cc.
 
 ## License
 
-Komai is licensed under **GPL-3.0** by its creators. This tap merely packages it
-for Homebrew.
+This tap is licensed under the **GNU General Public License, version 3 or later**; see [COPYING](COPYING).
+Boris confirmed this license for the original tap in [the handoff discussion](https://github.com/etkecc/komai/issues/282#issuecomment-5582476747).
 
-## Links
+[Komai](https://github.com/etkecc/komai) is also licensed under GPL-3.0-or-later.
 
-- [Komai GitHub](https://github.com/etkecc/komai)
-- [Komai Releases](https://github.com/etkecc/komai/releases)
+## Support
+
+Report packaging problems in [this repository's issues](https://github.com/etkecc/homebrew-komai/issues).
