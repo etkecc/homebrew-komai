@@ -38,7 +38,7 @@ brew upgrade --cask etkecc/komai/komai
 ```
 
 The tap checks for new [Komai releases](https://github.com/etkecc/komai/releases) daily.
-The updater refreshes the cask version and computes the DMG checksum when a new release appears.
+An update is published after its checksum, Homebrew checks, and macOS installation and uninstallation checks pass.
 
 ## Uninstall
 
@@ -66,5 +66,5 @@ Boris confirmed this license for the original tap in [the handoff discussion](ht
 
 ## Maintenance
 
-See [MAINTAINING.md](MAINTAINING.md) for macOS cask validation.
+See [MAINTAINING.md](MAINTAINING.md) for validation, automated updates, and the initial rollout procedure.
 Report packaging problems in [this repository's issues](https://github.com/etkecc/homebrew-komai/issues).

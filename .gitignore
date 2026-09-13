@@ -16,3 +16,6 @@ Bottles/
 mnt/
 /tmp/
 *.dmg
+
+# Python validation
+__pycache__/

@@ -5,6 +5,14 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+      sha256:
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -17,6 +25,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Test release validation
+        run: python3 -m unittest discover -s tests -v
+      - name: Apply the candidate update
+        if: inputs.version != ''
+        env:
+          KOMAI_VERSION: ${{ inputs.version }}
+          KOMAI_SHA256: ${{ inputs.sha256 }}
+        run: python3 scripts/update_cask.py --version "$KOMAI_VERSION" --sha256 "$KOMAI_SHA256"
       - name: Update Homebrew
         run: brew update
       - name: Check style, audit, install, and uninstall

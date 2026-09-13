@@ -2,100 +2,76 @@ name: Update Komai Cask
 
 on:
   schedule:
-    # Run daily at 2 AM UTC
-    - cron: '0 2 * * *'
+    - cron: "23 6 * * *"
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: update-komai
+  cancel-in-progress: false
 
 jobs:
-  update:
-    runs-on: ubuntu-latest
-    name: Check and update Komai cask
-
+  check:
+    if: github.repository == 'etkecc/homebrew-komai' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      changed: ${{ steps.release.outputs.changed }}
+      version: ${{ steps.release.outputs.version }}
+      sha256: ${{ steps.release.outputs.sha256 }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test release validation
+        run: python3 -m unittest discover -s tests -v
+      - name: Fetch the latest published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api repos/etkecc/komai/releases/latest > "$RUNNER_TEMP/release.json"
+      - name: Validate release metadata and prepare the cask
+        id: release
+        run: python3 scripts/update_cask.py --release-json "$RUNNER_TEMP/release.json"
 
-      - name: Fetch latest Komai release
-        id: latest_release
+  validate:
+    needs: check
+    # A manual run also validates an unchanged cask before enabling publishing.
+    if: needs.check.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/validate.yml
+    with:
+      version: ${{ needs.check.outputs.version }}
+      sha256: ${{ needs.check.outputs.sha256 }}
+
+  publish:
+    needs: [check, validate]
+    if: needs.check.outputs.changed == 'true' && vars.KOMAI_AUTO_UPDATE == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+      - name: Apply the validated version and checksum
+        env:
+          KOMAI_VERSION: ${{ needs.check.outputs.version }}
+          KOMAI_SHA256: ${{ needs.check.outputs.sha256 }}
+        run: python3 scripts/update_cask.py --version "$KOMAI_VERSION" --sha256 "$KOMAI_SHA256"
+      - name: Publish only if main still matches the tested revision
+        env:
+          KOMAI_VERSION: ${{ needs.check.outputs.version }}
         run: |
-          # Get the latest release info
-          LATEST_RELEASE=$(curl -fsSL https://api.github.com/repos/etkecc/komai/releases/latest)
-          TAG=$(echo "$LATEST_RELEASE" | jq -r '.tag_name')
-          VERSION=${TAG#v}
-
-          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
-            echo "ERROR: Could not determine latest Komai version"
+          set -euo pipefail
+          git fetch origin main
+          if [ "$(git rev-parse origin/main)" != "$GITHUB_SHA" ]; then
+            echo "main changed during validation; rerun the updater."
             exit 1
           fi
-
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-          # Find the ARM64 macOS DMG download URL
-          DMG_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name | test("macos-arm64.*\\.dmg$")) | .browser_download_url' | head -1)
-
-          if [ -z "$DMG_URL" ]; then
-            echo "ERROR: Could not find ARM64 DMG for Komai $TAG"
-            exit 1
-          fi
-
-          echo "dmg_url=$DMG_URL" >> "$GITHUB_OUTPUT"
-          echo "Found Komai $VERSION at $DMG_URL"
-
-      - name: Read current cask version
-        id: current
-        run: |
-          CURRENT_VERSION=$(grep -oP 'version "\K[^"]+' Casks/komai.rb | head -1)
-          echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
-          echo "Current version in cask: $CURRENT_VERSION"
-
-      - name: Calculate SHA256
-        id: sha256
-        if: steps.latest_release.outputs.version != steps.current.outputs.version
-        env:
-          DMG_URL: ${{ steps.latest_release.outputs.dmg_url }}
-        run: |
-          # Download the DMG and calculate SHA256
-          curl -fsSL "$DMG_URL" -o komai.dmg
-          if [ ! -s komai.dmg ]; then
-            echo "ERROR: Downloaded DMG is empty"
-            exit 1
-          fi
-          SHA256=$(sha256sum komai.dmg | cut -d' ' -f1)
-          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
-          echo "SHA256: $SHA256"
-          rm komai.dmg
-
-      - name: Update cask
-        id: update
-        if: steps.latest_release.outputs.version != steps.current.outputs.version
-        env:
-          NEW_VERSION: ${{ steps.latest_release.outputs.version }}
-          NEW_SHA256: ${{ steps.sha256.outputs.sha256 }}
-        run: |
-          echo "Updating from ${{ steps.current.outputs.version }} to $NEW_VERSION"
-          # The download URL is derived from the version, so only version and
-          # sha256 need to change.
-          sed -i "s/version \"[^\"]*\"/version \"$NEW_VERSION\"/" Casks/komai.rb
-          sed -i "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"$NEW_SHA256\"/" Casks/komai.rb
-
-      - name: Commit and push changes
-        if: steps.latest_release.outputs.version != steps.current.outputs.version
-        env:
-          NEW_VERSION: ${{ steps.latest_release.outputs.version }}
-          NEW_SHA256: ${{ steps.sha256.outputs.sha256 }}
-        run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add Casks/komai.rb
-          git commit -m "komai: update to $NEW_VERSION
-
-          Updated SHA256: $NEW_SHA256"
-          git push origin HEAD
-
-      - name: Notify if up to date
-        if: steps.latest_release.outputs.version == steps.current.outputs.version
-        run: echo "Komai cask is already at the latest version (${{ steps.current.outputs.version }})"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- Casks/komai.rb
+          git commit -m "komai: update to $KOMAI_VERSION"
+          git push origin HEAD:refs/heads/main
