@@ -66,5 +66,5 @@ Boris confirmed this license for the original tap in [the handoff discussion](ht
 
 ## Maintenance
 
-See [MAINTAINING.md](MAINTAINING.md) for validation, automated updates, and the initial rollout procedure.
+See [MAINTAINING.md](MAINTAINING.md) for validation, automated updates, and the adoption record.
 Report packaging problems in [this repository's issues](https://github.com/etkecc/homebrew-komai/issues).

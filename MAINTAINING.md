@@ -25,7 +25,8 @@ It leaves the checkout tapped for subsequent checks.
 These checks preserve quarantine and do not launch the app.
 Komai is ad-hoc signed, without Developer ID signing or notarization.
 Do not add `--no-quarantine`, remove quarantine attributes, or require `brew audit --new` or `--signing`: those signing checks target admission to Homebrew's central cask repository.
-First launch and real upgrade behavior need a separate Mac check.
+Interactive first launch, upgrades, and migration from another tap are outside this CI check.
+Additional manual checks are optional and do not block publication of the tap.
 
 The **Validate Komai Cask** workflow runs the tests and installation checks on an ARM64 `macos-26` runner for pushes, pull requests, and manual runs.
 The updater also calls it for each candidate release before publishing.
@@ -64,22 +65,22 @@ git diff -- Casks/komai.rb
 The script never commits or pushes.
 If GitHub has no asset digest, or the published file changes without a version bump, investigate the release instead of automatically replacing the checksum.
 
-## Initial rollout
+## Adoption and validation
 
 The source history was imported from Boris Stäheli's [original tap](https://github.com/bstaeheli/homebrew-komai) through commit `ca14ac513713a8e32384c035ba5ae12e4050d1f1`, preserving all 13 commits.
 Repository Actions were disabled before importing its scheduled updater.
 
-1. Obtain maintainer approval for the acknowledgement, documentation, and implementation before committing the adoption changes.
-2. Commit and push the reviewed changes while Actions remains disabled.
-3. Enable Actions, leaving `KOMAI_AUTO_UPDATE` unset.
-   Keep the default workflow token permission at read-only; the updater grants write only to publishing.
-4. Manually run **Update Komai Cask** on `main` and inspect its validation run.
-   Resolve any macOS or Homebrew failures before enabling publishing.
-5. Set `KOMAI_AUTO_UPDATE=true` after those checks pass.
-6. Verify a fresh install and first launch, an upgrade from an older release, and migration from Boris's tap on Apple Silicon.
-   Confirm settings and account data survive.
-   Homebrew automation does not verify these GUI flows.
-7. Advertise the tap and close [Komai issue #282](https://github.com/etkecc/komai/issues/282) after the installation and upgrade checks pass.
+The adopted tap passed [Apple Silicon CI on 2026-09-13](https://github.com/etkecc/homebrew-komai/actions/runs/34743589160), including all 13 updater tests, Homebrew style and online audit, installation, bundle signature verification, quarantine preservation, and uninstallation.
+Daily publishing was enabled after that run passed.
+
+The maintainer accepted the original author's experience and this independent CI validation as sufficient to publish the official tap.
+The cask retains the original DMG and standard `app "komai.app"` installation, with no custom upgrade or user-data deletion hooks.
+Interactive use, upgrades, and migration were not independently tested during adoption; do not describe them as verified.
+Reconsider additional testing if the app installation path changes or custom install, upgrade, or uninstall logic is introduced.
+
+Keep the default workflow token permission at read-only; only the publishing job needs write access.
+The repository action policy requires full-length commit SHAs and allows only the checkout action revision used by the workflows.
+When updating that action, allow the new revision in the repository's Actions settings before running validation, and remove the old allowance after the update passes.
 
 Keep force pushes and deletion disabled for `main`.
 The updater publishes validated bumps directly, so requiring PR-only changes or additional push checks would need a corresponding redesign of the publishing job.
