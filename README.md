@@ -64,6 +64,7 @@ Boris confirmed this license for the original tap in [the handoff discussion](ht
 
 [Komai](https://github.com/etkecc/komai) is also licensed under GPL-3.0-or-later.
 
-## Support
+## Maintenance
 
+See [MAINTAINING.md](MAINTAINING.md) for macOS cask validation.
 Report packaging problems in [this repository's issues](https://github.com/etkecc/homebrew-komai/issues).
